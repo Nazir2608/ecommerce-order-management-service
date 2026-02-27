@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:15-alpine:///orderservice_test
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+  jpa:
+    show-sql: true
+  flyway:
+    enabled: true
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+app:
+  jwt:
+    secret: test-secret-key-for-testing-purposes-min-32-chars
+    access-token-expiry-ms: 3600000
+    refresh-token-expiry-ms: 604800000
+  stripe:
+    mock-enabled: true
+  twilio:
+    mock-enabled: true
+  mail:
+    from: test@orderservice.com
+    from-name: Orderservice Test

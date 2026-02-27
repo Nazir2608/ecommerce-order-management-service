@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title>Orderservice Notification</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: #4F46E5; padding: 20px; border-radius: 8px 8px 0 0;">
+    <h1 style="color: white; margin: 0;">Order Update</h1>
+  </div>
+  <div style="padding: 30px; border: 1px solid #e0e0e0;">
+    <p>Hi <strong th:text="">Customer</strong>,</p>
+    <p>Your order <strong th:text="">ORD-001</strong> has been updated.</p>
+    <p th:if="">New status: <strong th:text="">STATUS</strong></p>
+    <p th:if="">Amount: <strong>$<span th:text="">0.00</span></strong></p>
+  </div>
+</body>
+</html>

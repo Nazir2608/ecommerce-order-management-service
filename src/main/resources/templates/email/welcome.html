@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title>Welcome to Orderservice</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: #4F46E5; padding: 20px; border-radius: 8px 8px 0 0;">
+    <h1 style="color: white; margin: 0;">Welcome to Orderservice! 🎉</h1>
+  </div>
+  <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; border: 1px solid #e0e0e0;">
+    <p>Hi <strong th:text="${name}">Customer</strong>,</p>
+    <p>Thank you for joining Orderservice! Your account has been created successfully.</p>
+    <p>You can now:</p>
+    <ul>
+      <li>Browse our product catalog</li>
+      <li>Add items to your cart</li>
+      <li>Place and track orders</li>
+    </ul>
+    <p style="color: #666; font-size: 12px; margin-top: 30px;">
+      If you didn't create this account, please contact us at support@orderservice.com
+    </p>
+  </div>
+</body>
+</html>
