@@ -160,7 +160,7 @@ ecommerce-order-management-service/
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/YOUR_USERNAME/ecommerce-order-management-service.git
+git clone https://github.com/Nazir2608/ecommerce-order-management-service.git
 cd ecommerce-order-management-service
 
 # 2. Start all services (App + Postgres + Redis + MailHog)
