@@ -9,6 +9,7 @@ import com.nazir.orderservice.exception.ResourceNotFoundException;
 import com.nazir.orderservice.repository.CategoryRepository;
 import com.nazir.orderservice.repository.ProductRepository;
 import com.nazir.orderservice.service.ProductService;
+import com.nazir.orderservice.specification.ProductSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -85,7 +86,7 @@ public class ProductServiceImpl implements ProductService {
     public PageResponse<ProductResponse> getProducts(UUID categoryId, String search,
                                                      BigDecimal minPrice, BigDecimal maxPrice,
                                                      Pageable pageable) {
-        Page<Product> page = productRepository.findByFilters(categoryId, search, minPrice, maxPrice, pageable);
+        Page<Product> page = productRepository.findAll(ProductSpecification.build(categoryId, search, minPrice, maxPrice), pageable);
         return PageResponse.of(page.map(this::toResponse));
     }
 

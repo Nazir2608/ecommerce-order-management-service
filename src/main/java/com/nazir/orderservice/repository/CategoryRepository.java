@@ -10,11 +10,9 @@ import java.util.UUID;
 
 public interface CategoryRepository extends JpaRepository<Category, UUID> {
     boolean existsByName(String name);
-    
-    @Query("""
-        SELECT c FROM Category c 
-        WHERE c.active = true
-        AND (:search IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%')))
-        """)
-    Page<Category> findBySearch(@Param("search") String search, Pageable pageable);
+
+    @Query("SELECT c FROM Category c WHERE c.active = true AND LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))")
+    Page<Category> findByNameContaining(@Param("search") String search, Pageable pageable);
+
+    Page<Category> findByActiveTrue(Pageable pageable);
 }
