@@ -37,10 +37,8 @@ public class OrderController {
 
     @PostMapping("/api/v1/orders")
     @Operation(summary = "Place a new order from cart")
-    public ResponseEntity<OrderResponse> placeOrder(@AuthenticationPrincipal UserDetails userDetails,
-            @Valid @RequestBody PlaceOrderRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(orderService.placeOrder(getUserId(userDetails), request));
+    public ResponseEntity<OrderResponse> placeOrder(@AuthenticationPrincipal UserDetails userDetails, @Valid @RequestBody PlaceOrderRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(orderService.placeOrder(getUserId(userDetails), request));
     }
 
     @GetMapping("/api/v1/orders")
@@ -54,15 +52,13 @@ public class OrderController {
 
     @GetMapping("/api/v1/orders/{orderId}")
     @Operation(summary = "Get order details")
-    public ResponseEntity<OrderResponse> getOrder(@AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable UUID orderId) {
+    public ResponseEntity<OrderResponse> getOrder(@AuthenticationPrincipal UserDetails userDetails, @PathVariable UUID orderId) {
         return ResponseEntity.ok(orderService.getOrderById(getUserId(userDetails), orderId));
     }
 
     @PostMapping("/api/v1/orders/{orderId}/cancel")
     @Operation(summary = "Cancel an order")
-    public ResponseEntity<OrderResponse> cancelOrder(@AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable UUID orderId) {
+    public ResponseEntity<OrderResponse> cancelOrder(@AuthenticationPrincipal UserDetails userDetails, @PathVariable UUID orderId) {
         return ResponseEntity.ok(orderService.cancelOrder(getUserId(userDetails), orderId));
     }
 
@@ -84,8 +80,7 @@ public class OrderController {
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Admin: Update order status")
     public ResponseEntity<OrderResponse> updateStatus(@AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable UUID orderId,
-            @Valid @RequestBody UpdateOrderStatusRequest request) {
+            @PathVariable UUID orderId, @Valid @RequestBody UpdateOrderStatusRequest request) {
         return ResponseEntity.ok(orderService.updateOrderStatus(
                 getUserId(userDetails), orderId, request.getNewStatus(), request.getReason()));
     }
