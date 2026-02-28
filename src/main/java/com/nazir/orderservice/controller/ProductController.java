@@ -73,8 +73,7 @@ public class ProductController {
     @PatchMapping("/api/v1/admin/products/{id}/stock")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Update product stock", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<ProductResponse> updateStock(@PathVariable UUID id,
-            @RequestParam int quantity) {
+    public ResponseEntity<ProductResponse> updateStock(@PathVariable UUID id, @RequestParam int quantity) {
         return ResponseEntity.ok(productService.updateStock(id, quantity));
     }
 }
