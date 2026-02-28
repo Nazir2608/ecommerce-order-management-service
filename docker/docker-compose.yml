@@ -1,6 +1,6 @@
-version: '3.8'
-
 services:
+
+  # ── Spring Boot App ───
   app:
     build:
       context: ..
@@ -9,19 +9,17 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=dev
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=orderservice_db
-      - DB_USERNAME=orderservice_user
-      - DB_PASSWORD=orderservice_pass
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - MAIL_HOST=mailhog
-      - MAIL_PORT=1025
-      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production-min-32-chars
-      - STRIPE_MOCK=true
-      - TWILIO_MOCK=true
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://postgres:5432/orderservice
+      DB_USERNAME: orderservice
+      DB_PASSWORD: orderservice
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      TWILIO_ENABLED: false
+      STRIPE_SECRET_KEY: sk_test_your_test_key_here
     depends_on:
       postgres:
         condition: service_healthy
@@ -31,25 +29,28 @@ services:
       - orderservice-network
     restart: unless-stopped
 
+  # ── PostgreSQL ────
   postgres:
     image: postgres:15-alpine
     container_name: orderservice-postgres
     environment:
-      POSTGRES_DB: orderservice_db
-      POSTGRES_USER: orderservice_user
-      POSTGRES_PASSWORD: orderservice_pass
+      POSTGRES_DB: orderservice
+      POSTGRES_USER: orderservice
+      POSTGRES_PASSWORD: orderservice
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - orderservice-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U orderservice_user -d orderservice_db"]
+      test: ["CMD-SHELL", "pg_isready -U orderservice -d orderservice"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - orderservice-network
+    restart: unless-stopped
 
+  # ── Redis ────
   redis:
     image: redis:7-alpine
     container_name: orderservice-redis
@@ -57,22 +58,25 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - orderservice-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - orderservice-network
+    restart: unless-stopped
 
-  mailhog:
-    image: mailhog/mailhog
-    container_name: orderservice-mailhog
+  # ── Mailpit───
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: orderservice-mailpit
     ports:
-      - "1025:1025"   # SMTP
-      - "8025:8025"   # Web UI — open http://localhost:8025 to see emails
+      - "1025:1025"   # SMTP — app sends emails here
+      - "8025:8025"   # Web UI — open http://localhost:8025 to read emails
     networks:
       - orderservice-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:

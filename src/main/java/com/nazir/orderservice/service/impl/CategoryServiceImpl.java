@@ -41,10 +41,8 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional
     public CategoryResponse updateCategory(UUID id, CreateCategoryRequest request) {
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
-        if (!category.getName().equalsIgnoreCase(request.getName())
-                && categoryRepository.existsByName(request.getName())) {
+        Category category = categoryRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+        if (!category.getName().equalsIgnoreCase(request.getName()) && categoryRepository.existsByName(request.getName())) {
             throw new DuplicateResourceException("Category already exists with name: " + request.getName());
         }
         category.setName(request.getName());
@@ -56,8 +54,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional
     public void deleteCategory(UUID id) {
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+        Category category = categoryRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Category not found"));
         category.setActive(false);
         categoryRepository.save(category);
     }
@@ -65,16 +62,19 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional(readOnly = true)
     public CategoryResponse getCategoryById(UUID id) {
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+        Category category = categoryRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Category not found"));
         return toResponse(category);
     }
 
     @Override
     @Transactional(readOnly = true)
     public PageResponse<CategoryResponse> getCategories(String search, Pageable pageable) {
-        Page<Category> page = categoryRepository.findBySearch(
-                (search == null || search.isBlank()) ? null : search, pageable);
+        Page<Category> page;
+        if (search == null || search.isBlank()) {
+            page = categoryRepository.findByActiveTrue(pageable);
+        } else {
+            page = categoryRepository.findByNameContaining(search, pageable);
+        }
         return PageResponse.of(page.map(this::toResponse));
     }
 
