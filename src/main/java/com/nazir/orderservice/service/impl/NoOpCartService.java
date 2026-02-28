@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-@ConditionalOnProperty(value = "features.cart.enabled", havingValue = "false")
 public class NoOpCartService implements CartService {
 
     private CartResponse empty(UUID userId) {
