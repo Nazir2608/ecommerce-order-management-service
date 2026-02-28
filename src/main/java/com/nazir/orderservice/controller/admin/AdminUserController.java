@@ -26,9 +26,7 @@ public class AdminUserController {
 
     @GetMapping
     @Operation(summary = "Get all users")
-    public ResponseEntity<PageResponse<UserResponse>> getAllUsers(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+    public ResponseEntity<PageResponse<UserResponse>> getAllUsers(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(userService.getAllUsers(page, size));
     }
 

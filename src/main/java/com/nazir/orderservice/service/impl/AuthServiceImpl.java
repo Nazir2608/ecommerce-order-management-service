@@ -48,7 +48,6 @@ public class AuthServiceImpl implements AuthService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new DuplicateResourceException("User already exists with email: " + request.getEmail());
         }
-
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
@@ -59,20 +58,15 @@ public class AuthServiceImpl implements AuthService {
 
         userRepository.save(user);
         log.info("New user registered: {}", user.getEmail());
-
         eventPublisher.publishEvent(new UserRegisteredEvent(user.getId()));
-
         return generateTokens(user.getEmail());
     }
 
     @Override
     public AuthResponse login(LoginRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
-
+        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
-
         log.info("User logged in: {}", user.getEmail());
         return generateTokens(user.getEmail());
     }
@@ -81,41 +75,26 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse refreshToken(RefreshTokenRequest request) {
         String refreshKey = REFRESH_TOKEN_PREFIX + request.getRefreshToken();
         String email = redisTemplate.opsForValue().get(refreshKey);
-
         if (email == null) {
             throw new ResourceNotFoundException("Refresh token is invalid or expired");
         }
-
         // Rotate: delete old refresh token
         redisTemplate.delete(refreshKey);
-
         return generateTokens(email);
     }
 
     @Override
     public void logout(String accessToken) {
         if (accessToken == null) return;
-
         // Blacklist access token until it expires (1 hour)
-        redisTemplate.opsForValue().set(
-                BLACKLIST_PREFIX + accessToken,
-                "blacklisted",
-                jwtUtil.getAccessTokenExpiryMs(),
-                TimeUnit.MILLISECONDS
-        );
+        redisTemplate.opsForValue().set(BLACKLIST_PREFIX + accessToken, "blacklisted", jwtUtil.getAccessTokenExpiryMs(), TimeUnit.MILLISECONDS);
     }
 
     private AuthResponse generateTokens(String email) {
         String accessToken = jwtUtil.generateAccessToken(email);
         String refreshToken = jwtUtil.generateRefreshToken();
-
         // Store refresh token in Redis for 7 days
-        redisTemplate.opsForValue().set(
-                REFRESH_TOKEN_PREFIX + refreshToken,
-                email,
-                7,
-                TimeUnit.DAYS
-        );
+        redisTemplate.opsForValue().set(REFRESH_TOKEN_PREFIX + refreshToken, email, 7, TimeUnit.DAYS);
 
         UserResponse user = userRepository.findByEmail(email)
                 .map(u -> UserResponse.builder()
