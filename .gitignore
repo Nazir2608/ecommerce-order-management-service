@@ -34,5 +34,6 @@ Thumbs.db
 # Docker volumes
 docker/volumes/
 
-# Application properties with secrets
-src/main/resources/application-prod.yml
+docker/.env
+.env
+*.env
