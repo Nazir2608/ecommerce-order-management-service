@@ -38,8 +38,8 @@ import java.util.UUID;
 @Slf4j
 public class PaymentServiceImpl implements PaymentService {
 
-    private final PaymentRepository   paymentRepository;
-    private final OrderRepository     orderRepository;
+    private final PaymentRepository paymentRepository;
+    private final OrderRepository orderRepository;
     private final NotificationService notificationService;
 
     @Value("${app.stripe.secret-key}")
@@ -54,27 +54,19 @@ public class PaymentServiceImpl implements PaymentService {
         log.info("Stripe SDK initialized");
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // INITIATE PAYMENT
-    // ─────────────────────────────────────────────────────────────────────────
     @Override
     @Transactional
     public PaymentResponse initiatePayment(UUID userId, UUID orderId) {
-
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
-
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
         if (!order.getUser().getId().equals(userId)) {
             throw new PaymentException("Access denied");
         }
-
         // Block if already paid
         paymentRepository.findByOrderId(orderId).ifPresent(p -> {
             if (p.getPaymentStatus() == PaymentStatus.SUCCESS) {
                 throw new PaymentException("Payment already completed for order: " + orderId);
             }
         });
-
         // Get existing pending payment or create new one
         Payment payment = paymentRepository.findByOrderId(orderId)
                 .orElse(Payment.builder()
@@ -87,26 +79,19 @@ public class PaymentServiceImpl implements PaymentService {
 
         try {
             // Stripe requires amount in smallest currency unit (paise for INR)
-            long amountInPaise = order.getFinalAmount()
-                    .multiply(BigDecimal.valueOf(100))
-                    .longValue();
+            long amountInPaise = order.getFinalAmount().multiply(BigDecimal.valueOf(100)).longValue();
 
             PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
                     .setAmount(amountInPaise)
                     .setCurrency("inr")
                     .setDescription("Order #" + order.getOrderNumber())
-                    .putMetadata("orderId",     orderId.toString())
-                    .putMetadata("userId",      userId.toString())
+                    .putMetadata("orderId", orderId.toString())
+                    .putMetadata("userId", userId.toString())
                     .putMetadata("orderNumber", order.getOrderNumber())
-                    .setAutomaticPaymentMethods(
-                            PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
-                                    .setEnabled(true)
-                                    .build()
-                    )
+                    .setAutomaticPaymentMethods(PaymentIntentCreateParams.AutomaticPaymentMethods.builder().setEnabled(true).build())
                     .build();
 
             PaymentIntent intent = PaymentIntent.create(params);
-
             // Save Stripe PaymentIntent ID — needed for refunds and webhook matching
             payment.setTransactionId(intent.getId());
             payment = paymentRepository.save(payment);
@@ -120,16 +105,11 @@ public class PaymentServiceImpl implements PaymentService {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
     // CONFIRM PAYMENT — for dev testing only, production uses webhook
-    // ─────────────────────────────────────────────────────────────────────────
     @Override
     @Transactional
     public PaymentResponse confirmPayment(UUID orderId, boolean success, String transactionId) {
-
-        Payment payment = paymentRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Payment not found for order: " + orderId));
-
+        Payment payment = paymentRepository.findByOrderId(orderId).orElseThrow(() -> new ResourceNotFoundException("Payment not found for order: " + orderId));
         Order order = payment.getOrder();
 
         if (success) {
@@ -137,31 +117,24 @@ public class PaymentServiceImpl implements PaymentService {
             payment.setTransactionId(transactionId);
             payment.setPaidAt(LocalDateTime.now());
             payment.setGatewayResponse("{\"status\":\"succeeded\",\"id\":\"" + transactionId + "\"}");
-
             order.setStatus(OrderStatus.CONFIRMED);
             orderRepository.save(order);
-
             notificationService.sendPaymentSuccessNotification(order);
             log.info("Payment confirmed for order={} txn={}", orderId, transactionId);
-
         } else {
             payment.setPaymentStatus(PaymentStatus.FAILED);
             payment.setGatewayResponse("{\"status\":\"failed\"}");
             notificationService.sendPaymentFailedNotification(order);
             log.warn("Payment failed for order={}", orderId);
         }
-
         payment = paymentRepository.save(payment);
         return toResponse(payment, null);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
     // STRIPE WEBHOOK — Stripe calls this after payment is processed
-    // ─────────────────────────────────────────────────────────────────────────
     @Override
     @Transactional
     public void handleStripeWebhook(String payload, String sigHeader) {
-
         // Verify signature — prevents forged webhook calls
         Event event;
         try {
@@ -203,29 +176,18 @@ public class PaymentServiceImpl implements PaymentService {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // REFUND
-    // ─────────────────────────────────────────────────────────────────────────
     @Override
     @Transactional
     public PaymentResponse processRefund(UUID paymentId) {
-
-        Payment payment = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Payment not found: " + paymentId));
-
+        Payment payment = paymentRepository.findById(paymentId).orElseThrow(() -> new ResourceNotFoundException("Payment not found: " + paymentId));
         if (payment.getPaymentStatus() != PaymentStatus.SUCCESS) {
             throw new PaymentException("Can only refund successful payments");
         }
-
         try {
-            RefundCreateParams params = RefundCreateParams.builder()
-                    .setPaymentIntent(payment.getTransactionId())
-                    .build();
-
+            RefundCreateParams params = RefundCreateParams.builder().setPaymentIntent(payment.getTransactionId()).build();
             Refund refund = Refund.create(params);
             payment.setGatewayResponse("{\"refundId\":\"" + refund.getId() + "\"}");
             log.info("Stripe refund created: {} for paymentId={}", refund.getId(), paymentId);
-
         } catch (StripeException e) {
             log.error("Stripe refund failed for paymentId={}: {}", paymentId, e.getMessage());
             throw new PaymentException("Refund failed: " + e.getMessage());
@@ -241,9 +203,6 @@ public class PaymentServiceImpl implements PaymentService {
         return toResponse(payment, null);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // GET PAYMENT
-    // ─────────────────────────────────────────────────────────────────────────
     @Override
     @Transactional(readOnly = true)
     public PaymentResponse getPaymentByOrderId(UUID orderId) {
@@ -252,9 +211,7 @@ public class PaymentServiceImpl implements PaymentService {
         return toResponse(payment, null);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // MAPPER
-    // ─────────────────────────────────────────────────────────────────────────
+
     private PaymentResponse toResponse(Payment payment, String clientSecret) {
         return PaymentResponse.builder()
                 .id(payment.getId())
