@@ -9,7 +9,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -17,52 +16,54 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 @Tag(name = "Payments", description = "Payment processing APIs")
-@SecurityRequirement(name = "bearerAuth")
 public class PaymentController {
 
     private final PaymentService paymentService;
     private final UserRepository userRepository;
 
-    @PostMapping("/payments/initiate")
-    @Operation(summary = "Initiate payment for an order")
-    public ResponseEntity<PaymentResponse> initiatePayment(@AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam UUID orderId) {
+    // ── Customer endpoints ────────────────────────────────────────────────────
+
+    @PostMapping("/api/v1/payments/initiate")
+    @Operation(summary = "Initiate payment for an order", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<PaymentResponse> initiatePayment(@AuthenticationPrincipal UserDetails userDetails, @RequestParam UUID orderId) {
         return ResponseEntity.ok(paymentService.initiatePayment(getUserId(userDetails), orderId));
     }
 
-    @PostMapping("/payments/confirm")
-    @Operation(summary = "Confirm payment (mock/testing endpoint)")
-    public ResponseEntity<PaymentResponse> confirmPayment(
-            @RequestParam UUID orderId,
-            @RequestParam(defaultValue = "true") boolean success,
-            @RequestParam(defaultValue = "txn_mock_123") String transactionId) {
+    @PostMapping("/api/v1/payments/confirm")
+    @Operation(summary = "Confirm payment (for testing — in prod use webhook)", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<PaymentResponse> confirmPayment(@RequestParam UUID orderId, @RequestParam(defaultValue = "true") boolean success, @RequestParam(defaultValue = "txn_test_123") String transactionId) {
         return ResponseEntity.ok(paymentService.confirmPayment(orderId, success, transactionId));
     }
 
-    @GetMapping("/payments/order/{orderId}")
-    @Operation(summary = "Get payment details for an order")
-    public ResponseEntity<PaymentResponse> getPayment(@PathVariable UUID orderId) {
+    @GetMapping("/api/v1/payments/order/{orderId}")
+    @Operation(summary = "Get payment details for an order", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<PaymentResponse> getPaymentByOrder(@PathVariable UUID orderId) {
         return ResponseEntity.ok(paymentService.getPaymentByOrderId(orderId));
     }
 
-    @PostMapping("/admin/payments/{paymentId}/refund")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Admin: Process refund for a payment")
-    public ResponseEntity<PaymentResponse> processRefund(@PathVariable UUID paymentId) {
-        return ResponseEntity.ok(paymentService.processRefund(paymentId));
-    }
+    // ── Stripe webhook — NO auth, verified by signature ───────────────────────
 
-    @PostMapping("/payments/webhook")
-    @Operation(summary = "Stripe webhook endpoint (public)")
-    public ResponseEntity<Void> handleWebhook(@RequestBody String payload, @RequestHeader(value = "Stripe-Signature", required = false) String signature) {
-        paymentService.handleStripeWebhook(payload, signature);
+    @PostMapping("/api/v1/payments/webhook/stripe")
+    @Operation(summary = "Stripe webhook endpoint — do not call manually")
+    public ResponseEntity<Void> stripeWebhook(@RequestBody String payload, @RequestHeader("Stripe-Signature") String sigHeader) {
+        paymentService.handleStripeWebhook(payload, sigHeader);
         return ResponseEntity.ok().build();
     }
 
+    // ── Admin ─────────────────────────────────────────────────────────────────
+
+    @PostMapping("/api/v1/admin/payments/{paymentId}/refund")
+    @Operation(summary = "Refund a payment (Admin only)", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<PaymentResponse> refundPayment(@PathVariable UUID paymentId) {
+        return ResponseEntity.ok(paymentService.processRefund(paymentId));
+    }
+
+    // ── Helper ────────────────────────────────────────────────────────────────
+
     private UUID getUserId(UserDetails userDetails) {
-        return userRepository.findByEmail(userDetails.getUsername()).orElseThrow().getId();
+        User user = userRepository.findByEmail(userDetails.getUsername()).orElseThrow();
+        return user.getId();
     }
 }
