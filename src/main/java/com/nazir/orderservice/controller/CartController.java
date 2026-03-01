@@ -1,6 +1,7 @@
 package com.nazir.orderservice.controller;
 
 import com.nazir.orderservice.dto.request.AddToCartRequest;
+import com.nazir.orderservice.dto.request.UpdateCartItemRequest;
 import com.nazir.orderservice.dto.response.CartResponse;
 import com.nazir.orderservice.entity.User;
 import com.nazir.orderservice.repository.UserRepository;
@@ -36,17 +37,14 @@ public class CartController {
 
     @PostMapping("/items")
     @Operation(summary = "Add item to cart")
-    public ResponseEntity<CartResponse> addItem(@AuthenticationPrincipal UserDetails userDetails,
-            @Valid @RequestBody AddToCartRequest request) {
+    public ResponseEntity<CartResponse> addItem(@AuthenticationPrincipal UserDetails userDetails, @Valid @RequestBody AddToCartRequest request) {
         return ResponseEntity.ok(cartService.addItem(getUserId(userDetails), request));
     }
 
     @PutMapping("/items/{cartItemId}")
     @Operation(summary = "Update cart item quantity")
-    public ResponseEntity<CartResponse> updateItem(@AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable UUID cartItemId,
-            @RequestParam int quantity) {
-        return ResponseEntity.ok(cartService.updateItemQuantity(getUserId(userDetails), cartItemId, quantity));
+    public ResponseEntity<CartResponse> updateItem(@AuthenticationPrincipal UserDetails userDetails, @PathVariable UUID cartItemId, @RequestBody UpdateCartItemRequest request) {
+        return ResponseEntity.ok(cartService.updateItemQuantity(getUserId(userDetails), cartItemId, request));
     }
 
     @DeleteMapping("/items/{cartItemId}")
