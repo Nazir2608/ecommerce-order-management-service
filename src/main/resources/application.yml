@@ -41,8 +41,8 @@ app:
     refresh-token-expiry-ms: 604800000
 
   stripe:
-    secret-key: ${STRIPE_SECRET_KEY:sk_test_your_test_key_here}
-    webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_your_webhook_secret}
+    secret-key: ${STRIPE_SECRET_KEY}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET}
 
   twilio:
     account-sid: ${TWILIO_ACCOUNT_SID:}

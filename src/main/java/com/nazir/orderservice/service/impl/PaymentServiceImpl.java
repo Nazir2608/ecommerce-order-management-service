@@ -11,14 +11,25 @@ import com.nazir.orderservice.exception.ResourceNotFoundException;
 import com.nazir.orderservice.repository.OrderRepository;
 import com.nazir.orderservice.repository.PaymentRepository;
 import com.nazir.orderservice.service.NotificationService;
-import com.nazir.orderservice.service.OrderService;
 import com.nazir.orderservice.service.PaymentService;
+import com.stripe.Stripe;
+import com.stripe.exception.SignatureVerificationException;
+import com.stripe.exception.StripeException;
+import com.stripe.model.Event;
+import com.stripe.model.EventDataObjectDeserializer;
+import com.stripe.model.PaymentIntent;
+import com.stripe.model.Refund;
+import com.stripe.net.Webhook;
+import com.stripe.param.PaymentIntentCreateParams;
+import com.stripe.param.RefundCreateParams;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -27,19 +38,29 @@ import java.util.UUID;
 @Slf4j
 public class PaymentServiceImpl implements PaymentService {
 
-    private final PaymentRepository paymentRepository;
-    private final OrderRepository orderRepository;
+    private final PaymentRepository   paymentRepository;
+    private final OrderRepository     orderRepository;
     private final NotificationService notificationService;
 
-    @Value("${app.stripe.mock-enabled:true}")
-    private boolean stripeMock;
-
-    @Value("${app.stripe.secret-key:sk_test_placeholder}")
+    @Value("${app.stripe.secret-key}")
     private String stripeSecretKey;
 
+    @Value("${app.stripe.webhook-secret}")
+    private String stripeWebhookSecret;
+
+    @PostConstruct
+    public void init() {
+        Stripe.apiKey = stripeSecretKey;
+        log.info("Stripe SDK initialized");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // INITIATE PAYMENT
+    // ─────────────────────────────────────────────────────────────────────────
     @Override
     @Transactional
     public PaymentResponse initiatePayment(UUID userId, UUID orderId) {
+
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
 
@@ -47,48 +68,65 @@ public class PaymentServiceImpl implements PaymentService {
             throw new PaymentException("Access denied");
         }
 
-        // Check if payment already exists
+        // Block if already paid
         paymentRepository.findByOrderId(orderId).ifPresent(p -> {
             if (p.getPaymentStatus() == PaymentStatus.SUCCESS) {
                 throw new PaymentException("Payment already completed for order: " + orderId);
             }
         });
 
+        // Get existing pending payment or create new one
         Payment payment = paymentRepository.findByOrderId(orderId)
                 .orElse(Payment.builder()
                         .order(order)
                         .paymentMethod(PaymentMethod.CREDIT_CARD)
                         .paymentStatus(PaymentStatus.PENDING)
                         .amount(order.getFinalAmount())
-                        .currency("USD")
+                        .currency("INR")
                         .build());
 
-        String clientSecret;
-        if (stripeMock) {
-            // Mock mode: return a fake client secret
-            clientSecret = "pi_mock_" + UUID.randomUUID().toString().replace("-", "") + "_secret_mock";
-            log.info("[MOCK STRIPE] PaymentIntent created for order: {} amount: {}", orderId, order.getFinalAmount());
-        } else {
-            // Real Stripe integration
-            // Stripe.apiKey = stripeSecretKey;
-            // PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
-            //     .setAmount(order.getFinalAmount().multiply(BigDecimal.valueOf(100)).longValue())
-            //     .setCurrency("usd")
-            //     .setMetadata(Map.of("orderId", orderId.toString()))
-            //     .build();
-            // PaymentIntent intent = PaymentIntent.create(params);
-            // clientSecret = intent.getClientSecret();
-            clientSecret = "real_stripe_client_secret";
+        try {
+            // Stripe requires amount in smallest currency unit (paise for INR)
+            long amountInPaise = order.getFinalAmount()
+                    .multiply(BigDecimal.valueOf(100))
+                    .longValue();
+
+            PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
+                    .setAmount(amountInPaise)
+                    .setCurrency("inr")
+                    .setDescription("Order #" + order.getOrderNumber())
+                    .putMetadata("orderId",     orderId.toString())
+                    .putMetadata("userId",      userId.toString())
+                    .putMetadata("orderNumber", order.getOrderNumber())
+                    .setAutomaticPaymentMethods(
+                            PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
+                                    .setEnabled(true)
+                                    .build()
+                    )
+                    .build();
+
+            PaymentIntent intent = PaymentIntent.create(params);
+
+            // Save Stripe PaymentIntent ID — needed for refunds and webhook matching
+            payment.setTransactionId(intent.getId());
+            payment = paymentRepository.save(payment);
+
+            log.info("Stripe PaymentIntent created: {} for order={}", intent.getId(), orderId);
+            return toResponse(payment, intent.getClientSecret());
+
+        } catch (StripeException e) {
+            log.error("Stripe PaymentIntent creation failed for order={}: {}", orderId, e.getMessage());
+            throw new PaymentException("Failed to initiate payment: " + e.getMessage());
         }
-
-        payment = paymentRepository.save(payment);
-
-        return toResponse(payment, clientSecret);
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // CONFIRM PAYMENT — for dev testing only, production uses webhook
+    // ─────────────────────────────────────────────────────────────────────────
     @Override
     @Transactional
     public PaymentResponse confirmPayment(UUID orderId, boolean success, String transactionId) {
+
         Payment payment = paymentRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found for order: " + orderId));
 
@@ -100,34 +138,78 @@ public class PaymentServiceImpl implements PaymentService {
             payment.setPaidAt(LocalDateTime.now());
             payment.setGatewayResponse("{\"status\":\"succeeded\",\"id\":\"" + transactionId + "\"}");
 
-            // Update order status to CONFIRMED
             order.setStatus(OrderStatus.CONFIRMED);
             orderRepository.save(order);
 
             notificationService.sendPaymentSuccessNotification(order);
-            log.info("Payment confirmed for order: {} txn: {}", orderId, transactionId);
+            log.info("Payment confirmed for order={} txn={}", orderId, transactionId);
+
         } else {
             payment.setPaymentStatus(PaymentStatus.FAILED);
             payment.setGatewayResponse("{\"status\":\"failed\"}");
             notificationService.sendPaymentFailedNotification(order);
-            log.warn("Payment failed for order: {}", orderId);
+            log.warn("Payment failed for order={}", orderId);
         }
 
         payment = paymentRepository.save(payment);
         return toResponse(payment, null);
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // STRIPE WEBHOOK — Stripe calls this after payment is processed
+    // ─────────────────────────────────────────────────────────────────────────
     @Override
-    @Transactional(readOnly = true)
-    public PaymentResponse getPaymentByOrderId(UUID orderId) {
-        Payment payment = paymentRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Payment not found for order: " + orderId));
-        return toResponse(payment, null);
+    @Transactional
+    public void handleStripeWebhook(String payload, String sigHeader) {
+
+        // Verify signature — prevents forged webhook calls
+        Event event;
+        try {
+            event = Webhook.constructEvent(payload, sigHeader, stripeWebhookSecret);
+        } catch (SignatureVerificationException e) {
+            log.error("Invalid Stripe webhook signature: {}", e.getMessage());
+            throw new PaymentException("Invalid webhook signature");
+        }
+
+        log.info("Stripe webhook received: type={} id={}", event.getType(), event.getId());
+
+        switch (event.getType()) {
+
+            case "payment_intent.succeeded" -> {
+                EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
+                if (deserializer.getObject().isPresent()) {
+                    PaymentIntent intent = (PaymentIntent) deserializer.getObject().get();
+                    String orderId = intent.getMetadata().get("orderId");
+                    if (orderId != null) {
+                        confirmPayment(UUID.fromString(orderId), true, intent.getId());
+                        log.info("Webhook: payment succeeded for order={}", orderId);
+                    }
+                }
+            }
+
+            case "payment_intent.payment_failed" -> {
+                EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
+                if (deserializer.getObject().isPresent()) {
+                    PaymentIntent intent = (PaymentIntent) deserializer.getObject().get();
+                    String orderId = intent.getMetadata().get("orderId");
+                    if (orderId != null) {
+                        confirmPayment(UUID.fromString(orderId), false, intent.getId());
+                        log.warn("Webhook: payment failed for order={}", orderId);
+                    }
+                }
+            }
+
+            default -> log.info("Unhandled Stripe event: {}", event.getType());
+        }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // REFUND
+    // ─────────────────────────────────────────────────────────────────────────
     @Override
     @Transactional
     public PaymentResponse processRefund(UUID paymentId) {
+
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found: " + paymentId));
 
@@ -135,11 +217,19 @@ public class PaymentServiceImpl implements PaymentService {
             throw new PaymentException("Can only refund successful payments");
         }
 
-        if (stripeMock) {
-            log.info("[MOCK STRIPE] Refund processed for payment: {} amount: {}",
-                    paymentId, payment.getAmount());
+        try {
+            RefundCreateParams params = RefundCreateParams.builder()
+                    .setPaymentIntent(payment.getTransactionId())
+                    .build();
+
+            Refund refund = Refund.create(params);
+            payment.setGatewayResponse("{\"refundId\":\"" + refund.getId() + "\"}");
+            log.info("Stripe refund created: {} for paymentId={}", refund.getId(), paymentId);
+
+        } catch (StripeException e) {
+            log.error("Stripe refund failed for paymentId={}: {}", paymentId, e.getMessage());
+            throw new PaymentException("Refund failed: " + e.getMessage());
         }
-        // Real Stripe: Refund.create(RefundCreateParams.builder().setPaymentIntent(...).build())
 
         payment.setPaymentStatus(PaymentStatus.REFUNDED);
         payment.getOrder().setStatus(OrderStatus.REFUNDED);
@@ -151,13 +241,20 @@ public class PaymentServiceImpl implements PaymentService {
         return toResponse(payment, null);
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // GET PAYMENT
+    // ─────────────────────────────────────────────────────────────────────────
     @Override
-    public void handleStripeWebhook(String payload, String sigHeader) {
-        // In real implementation: verify webhook signature using Stripe SDK
-        // Event event = Webhook.constructEvent(payload, sigHeader, stripeWebhookSecret);
-        log.info("Stripe webhook received (mock handling)");
+    @Transactional(readOnly = true)
+    public PaymentResponse getPaymentByOrderId(UUID orderId) {
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found for order: " + orderId));
+        return toResponse(payment, null);
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // MAPPER
+    // ─────────────────────────────────────────────────────────────────────────
     private PaymentResponse toResponse(Payment payment, String clientSecret) {
         return PaymentResponse.builder()
                 .id(payment.getId())
