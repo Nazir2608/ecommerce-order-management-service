@@ -1,5 +1,4 @@
 package com.nazir.orderservice.service.impl;
-
 import com.nazir.orderservice.dto.response.*;
 import com.nazir.orderservice.entity.Address;
 import com.nazir.orderservice.entity.Order;
@@ -25,13 +24,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
-    private final UserRepository    userRepository;
+    private final UserRepository userRepository;
     private final AddressRepository addressRepository;
-    private final OrderRepository   orderRepository;
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // PROFILE
-    // ─────────────────────────────────────────────────────────────────────────
+    private final OrderRepository orderRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -45,7 +40,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponse updateProfile(UUID userId, String name, String phone) {
         User user = getUser(userId);
-        if (name  != null && !name.isBlank())  user.setName(name);
+        if (name != null && !name.isBlank()) user.setName(name);
         if (phone != null && !phone.isBlank()) user.setPhone(phone);
         user = userRepository.save(user);
         List<Address> addresses = addressRepository.findByUserId(userId);
@@ -53,14 +48,9 @@ public class UserServiceImpl implements UserService {
         return toResponse(user, addresses);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // ADDRESSES
-    // ─────────────────────────────────────────────────────────────────────────
-
     @Override
     @Transactional
-    public AddressResponse addAddress(UUID userId, String street, String city,
-                                      String state, String country, String zipCode) {
+    public AddressResponse addAddress(UUID userId, String street, String city, String state, String country, String zipCode) {
         User user = getUser(userId);
         List<Address> existing = addressRepository.findByUserId(userId);
 
@@ -83,17 +73,12 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public List<AddressResponse> getMyAddresses(UUID userId) {
         getUser(userId); // validate user exists
-        return addressRepository.findByUserId(userId)
-                .stream()
-                .map(this::toAddressResponse)
-                .toList();
+        return addressRepository.findByUserId(userId).stream().map(this::toAddressResponse).toList();
     }
 
     @Override
     @Transactional
-    public AddressResponse updateAddress(UUID userId, UUID addressId,
-                                         String street, String city,
-                                         String state, String country, String zipCode) {
+    public AddressResponse updateAddress(UUID userId, UUID addressId, String street, String city, String state, String country, String zipCode) {
         Address address = getAddressForUser(userId, addressId);
         address.setStreet(street);
         address.setCity(city);
@@ -110,15 +95,12 @@ public class UserServiceImpl implements UserService {
     public void deleteAddress(UUID userId, UUID addressId) {
         Address address = getAddressForUser(userId, addressId);
         addressRepository.delete(address);
-
         // If deleted address was default, assign default to first remaining
         if (address.isDefault()) {
-            addressRepository.findByUserId(userId).stream()
-                    .findFirst()
-                    .ifPresent(first -> {
-                        first.setDefault(true);
-                        addressRepository.save(first);
-                    });
+            addressRepository.findByUserId(userId).stream().findFirst().ifPresent(first -> {
+                first.setDefault(true);
+                addressRepository.save(first);
+            });
         }
         log.info("Address deleted: addressId={}", addressId);
     }
@@ -131,7 +113,6 @@ public class UserServiceImpl implements UserService {
             a.setDefault(false);
             addressRepository.save(a);
         });
-
         // Set the chosen one as default
         Address address = getAddressForUser(userId, addressId);
         address.setDefault(true);
@@ -139,10 +120,6 @@ public class UserServiceImpl implements UserService {
         log.info("Default address set: addressId={}", addressId);
         return toAddressResponse(address);
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // MY ORDERS (inside profile)
-    // ─────────────────────────────────────────────────────────────────────────
 
     @Override
     @Transactional(readOnly = true)
@@ -153,18 +130,13 @@ public class UserServiceImpl implements UserService {
         return PageResponse.of(orders.map(this::toOrderSummary));
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
     // ADMIN OPERATIONS
-    // ─────────────────────────────────────────────────────────────────────────
 
     @Override
     @Transactional(readOnly = true)
     public PageResponse<UserResponse> getAllUsers(int page, int size) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return PageResponse.of(
-                userRepository.findAll(pageable)
-                        .map(u -> toResponse(u, addressRepository.findByUserId(u.getId())))
-        );
+        return PageResponse.of(userRepository.findAll(pageable).map(u -> toResponse(u, addressRepository.findByUserId(u.getId()))));
     }
 
     @Override
@@ -178,7 +150,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void deactivateUser(UUID id) {
         User user = getUser(id);
-        user.setActive(false);
+        user.setIsActive(false);
         userRepository.save(user);
         log.info("User deactivated: userId={}", id);
     }
@@ -187,23 +159,17 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void activateUser(UUID id) {
         User user = getUser(id);
-        user.setActive(true);
+        user.setIsActive(true);
         userRepository.save(user);
         log.info("User activated: userId={}", id);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // HELPERS
-    // ─────────────────────────────────────────────────────────────────────────
-
     private User getUser(UUID userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
     private Address getAddressForUser(UUID userId, UUID addressId) {
-        Address address = addressRepository.findById(addressId)
-                .orElseThrow(() -> new ResourceNotFoundException("Address not found"));
+        Address address = addressRepository.findById(addressId).orElseThrow(() -> new ResourceNotFoundException("Address not found"));
         // Security: ensure address belongs to this user
         if (!address.getUser().getId().equals(userId)) {
             throw new ResourceNotFoundException("Address not found");
@@ -211,18 +177,14 @@ public class UserServiceImpl implements UserService {
         return address;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // MAPPERS
-    // ─────────────────────────────────────────────────────────────────────────
-
     private UserResponse toResponse(User user, List<Address> addresses) {
         return UserResponse.builder()
                 .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
                 .phone(user.getPhone())
-                .role(user.getRole().name())
-                .active(user.isActive())
+                .role(user.getRole())
+                .active(user.getIsActive())
                 .addresses(addresses.stream().map(this::toAddressResponse).toList())
                 .createdAt(user.getCreatedAt())
                 .build();

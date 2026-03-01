@@ -1,17 +1,23 @@
 package com.nazir.orderservice.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-public class UpdateProfileRequest {
+public class AddressRequest {
 
-    @NotBlank(message = "Name is required")
-    @Size(min = 2, max = 100)
-    private String name;
+    @NotBlank(message = "Street is required")
+    private String street;
 
-    @Pattern(regexp = "^[0-9]{10,15}$", message = "Phone must be 10-15 digits")
-    private String phone;
+    @NotBlank(message = "City is required")
+    private String city;
+
+    @NotBlank(message = "State is required")
+    private String state;
+
+    @NotBlank(message = "Country is required")
+    private String country;
+
+    @NotBlank(message = "Zip code is required")
+    private String zipCode;
 }

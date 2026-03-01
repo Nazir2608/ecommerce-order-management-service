@@ -30,104 +30,62 @@ import java.util.UUID;
 @SecurityRequirement(name = "bearerAuth")
 public class UserController {
 
-    private final UserService    userService;
+    private final UserService userService;
     private final UserRepository userRepository;
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // PROFILE
-    // ─────────────────────────────────────────────────────────────────────────
 
     @GetMapping("/me")
     @Operation(summary = "Get my profile (includes addresses)")
-    public ResponseEntity<UserResponse> getMyProfile(
-            @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<UserResponse> getMyProfile(@AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(userService.getCurrentUser(getUserId(userDetails)));
     }
 
     @PutMapping("/me")
     @Operation(summary = "Update my profile (name, phone)")
-    public ResponseEntity<UserResponse> updateProfile(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @Valid @RequestBody UpdateProfileRequest request) {
-        return ResponseEntity.ok(
-                userService.updateProfile(getUserId(userDetails), request.getName(), request.getPhone()));
+    public ResponseEntity<UserResponse> updateProfile(@AuthenticationPrincipal UserDetails userDetails, @Valid @RequestBody UpdateProfileRequest request) {
+        return ResponseEntity.ok(userService.updateProfile(getUserId(userDetails), request.getName(), request.getPhone()));
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // ADDRESSES
-    // ─────────────────────────────────────────────────────────────────────────
 
     @PostMapping("/me/addresses")
     @Operation(summary = "Add a new shipping address")
-    public ResponseEntity<AddressResponse> addAddress(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @Valid @RequestBody AddressRequest request) {
-        AddressResponse response = userService.addAddress(
-                getUserId(userDetails),
-                request.getStreet(), request.getCity(),
-                request.getState(), request.getCountry(), request.getZipCode());
+    public ResponseEntity<AddressResponse> addAddress(@AuthenticationPrincipal UserDetails userDetails, @Valid @RequestBody AddressRequest request) {
+        AddressResponse response = userService.addAddress(getUserId(userDetails), request.getStreet(), request.getCity(), request.getState(), request.getCountry(), request.getZipCode());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/me/addresses")
     @Operation(summary = "Get all my addresses")
-    public ResponseEntity<List<AddressResponse>> getMyAddresses(
-            @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<List<AddressResponse>> getMyAddresses(@AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(userService.getMyAddresses(getUserId(userDetails)));
     }
 
     @PutMapping("/me/addresses/{addressId}")
     @Operation(summary = "Update an address")
-    public ResponseEntity<AddressResponse> updateAddress(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable UUID addressId,
-            @Valid @RequestBody AddressRequest request) {
-        AddressResponse response = userService.updateAddress(
-                getUserId(userDetails), addressId,
-                request.getStreet(), request.getCity(),
-                request.getState(), request.getCountry(), request.getZipCode());
+    public ResponseEntity<AddressResponse> updateAddress(@AuthenticationPrincipal UserDetails userDetails, @PathVariable UUID addressId, @Valid @RequestBody AddressRequest request) {
+        AddressResponse response = userService.updateAddress(getUserId(userDetails), addressId, request.getStreet(), request.getCity(), request.getState(), request.getCountry(), request.getZipCode());
         return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/me/addresses/{addressId}/default")
     @Operation(summary = "Set an address as default")
-    public ResponseEntity<AddressResponse> setDefaultAddress(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable UUID addressId) {
-        return ResponseEntity.ok(
-                userService.setDefaultAddress(getUserId(userDetails), addressId));
+    public ResponseEntity<AddressResponse> setDefaultAddress(@AuthenticationPrincipal UserDetails userDetails, @PathVariable UUID addressId) {
+        return ResponseEntity.ok(userService.setDefaultAddress(getUserId(userDetails), addressId));
     }
 
     @DeleteMapping("/me/addresses/{addressId}")
     @Operation(summary = "Delete an address")
-    public ResponseEntity<Void> deleteAddress(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable UUID addressId) {
+    public ResponseEntity<Void> deleteAddress(@AuthenticationPrincipal UserDetails userDetails, @PathVariable UUID addressId) {
         userService.deleteAddress(getUserId(userDetails), addressId);
         return ResponseEntity.noContent().build();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // MY ORDERS (inside profile)
-    // ─────────────────────────────────────────────────────────────────────────
-
     @GetMapping("/me/orders")
     @Operation(summary = "Get my order history")
-    public ResponseEntity<PageResponse<OrderSummaryResponse>> getMyOrders(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(defaultValue = "0")  int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(
-                userService.getMyOrders(getUserId(userDetails), page, size));
+    public ResponseEntity<PageResponse<OrderSummaryResponse>> getMyOrders(@AuthenticationPrincipal UserDetails userDetails, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(userService.getMyOrders(getUserId(userDetails), page, size));
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // HELPER
-    // ─────────────────────────────────────────────────────────────────────────
-
     private UUID getUserId(UserDetails userDetails) {
-        User user = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow();
+        User user = userRepository.findByEmail(userDetails.getUsername()).orElseThrow();
         return user.getId();
     }
 }
