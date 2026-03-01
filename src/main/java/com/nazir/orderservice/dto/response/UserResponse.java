@@ -4,6 +4,7 @@ import com.nazir.orderservice.enums.Role;
 import lombok.Builder;
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data @Builder
@@ -14,5 +15,6 @@ public class UserResponse {
     private String phone;
     private Role role;
     private boolean active;
+    private List<AddressResponse> addresses;
     private LocalDateTime createdAt;
 }
