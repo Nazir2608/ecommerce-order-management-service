@@ -43,10 +43,8 @@ public class OrderController {
 
     @GetMapping("/api/v1/orders")
     @Operation(summary = "Get my orders")
-    public ResponseEntity<PageResponse<OrderResponse>> getMyOrders(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(required = false) OrderStatus status,
-            @PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
+    public ResponseEntity<PageResponse<OrderResponse>> getMyOrders(@AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(required = false) OrderStatus status, @PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
         return ResponseEntity.ok(orderService.getMyOrders(getUserId(userDetails), status, pageable));
     }
 
@@ -81,8 +79,7 @@ public class OrderController {
     @Operation(summary = "Admin: Update order status")
     public ResponseEntity<OrderResponse> updateStatus(@AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID orderId, @Valid @RequestBody UpdateOrderStatusRequest request) {
-        return ResponseEntity.ok(orderService.updateOrderStatus(
-                getUserId(userDetails), orderId, request.getNewStatus(), request.getReason()));
+        return ResponseEntity.ok(orderService.updateOrderStatus(getUserId(userDetails), orderId, request.getNewStatus(), request.getReason()));
     }
 
     private UUID getUserId(UserDetails userDetails) {

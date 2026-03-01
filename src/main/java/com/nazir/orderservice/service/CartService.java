@@ -1,6 +1,7 @@
 package com.nazir.orderservice.service;
 
 import com.nazir.orderservice.dto.request.AddToCartRequest;
+import com.nazir.orderservice.dto.request.UpdateCartItemRequest;
 import com.nazir.orderservice.dto.response.CartResponse;
 
 import java.util.UUID;
@@ -11,7 +12,7 @@ public interface CartService {
 
     CartResponse addItem(UUID userId, AddToCartRequest request);
 
-    CartResponse updateItemQuantity(UUID userId, UUID cartItemId, int quantity);
+    CartResponse updateItemQuantity(UUID userId, UUID cartItemId, UpdateCartItemRequest request);
 
     CartResponse removeItem(UUID userId, UUID cartItemId);
 

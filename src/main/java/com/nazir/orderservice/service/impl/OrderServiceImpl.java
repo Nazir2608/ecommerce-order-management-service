@@ -84,9 +84,7 @@ public class OrderServiceImpl implements OrderService {
                     .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
             if (product.getStockQuantity() < cartItem.getQuantity()) {
-                throw new InsufficientStockException(
-                        "Insufficient stock for: " + product.getName() +
-                        ". Available: " + product.getStockQuantity());
+                throw new InsufficientStockException(product.getName(), cartItem.getQuantity(), product.getStockQuantity());
             }
 
             product.setStockQuantity(product.getStockQuantity() - cartItem.getQuantity());
