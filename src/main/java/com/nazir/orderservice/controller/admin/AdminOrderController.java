@@ -47,10 +47,7 @@ public class AdminOrderController {
 
     @PatchMapping("/{orderId}/status")
     @Operation(summary = "Update order status")
-    public ResponseEntity<OrderResponse> updateOrderStatus(
-            @PathVariable UUID orderId,
-            @RequestBody UpdateOrderStatusRequest request) {
-
+    public ResponseEntity<OrderResponse> updateOrderStatus(@PathVariable UUID orderId, @RequestBody UpdateOrderStatusRequest request) {
         UUID adminId = securityUtils.getCurrentUserId();
         return ResponseEntity.ok(orderService.updateOrderStatus(adminId, orderId, request.getNewStatus(), request.getReason()));
     }
