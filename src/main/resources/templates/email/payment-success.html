@@ -1,15 +1,120 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="UTF-8"><title>Orderservice Notification</title></head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: #4F46E5; padding: 20px; border-radius: 8px 8px 0 0;">
-    <h1 style="color: white; margin: 0;">Order Update</h1>
-  </div>
-  <div style="padding: 30px; border: 1px solid #e0e0e0;">
-    <p>Hi <strong th:text="">Customer</strong>,</p>
-    <p>Your order <strong th:text="">ORD-001</strong> has been updated.</p>
-    <p th:if="">New status: <strong th:text="">STATUS</strong></p>
-    <p th:if="">Amount: <strong>$<span th:text="">0.00</span></strong></p>
-  </div>
+<head>
+    <meta charset="UTF-8"/>
+    <title>Payment Successful</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; background: #f4f4f4; }
+        .container { max-width: 600px; margin: 30px auto; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #22c55e, #16a34a); padding: 36px 30px; text-align: center; }
+        .header h1 { color: #fff; font-size: 26px; }
+        .header p { color: #dcfce7; font-size: 14px; margin-top: 6px; }
+        .body { padding: 32px 30px; }
+        .greeting { font-size: 15px; color: #374151; margin-bottom: 24px; line-height: 1.6; }
+        .amount-box { background: #f0fdf4; border: 2px solid #22c55e; border-radius: 10px; padding: 24px; text-align: center; margin: 24px 0; }
+        .amount-box .lbl { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; }
+        .amount-box .amount { font-size: 36px; font-weight: bold; color: #16a34a; margin-top: 6px; }
+        .section { background: #f9fafb; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .section h3 { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; }
+        .row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 14px; border-bottom: 1px solid #f3f4f6; }
+        .row:last-child { border-bottom: none; }
+        .row .lbl { color: #6b7280; }
+        .row .val { color: #111827; font-weight: 500; text-align: right; max-width: 60%; }
+        table.items { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 14px; }
+        table.items th { text-align: left; padding: 8px 4px; color: #6b7280; font-size: 12px; border-bottom: 1px solid #e5e7eb; }
+        table.items td { padding: 9px 4px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+        table.items .price { text-align: right; font-weight: 500; }
+        .badge { display: inline-block; background: #dcfce7; color: #16a34a; padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .footer { background: #f9fafb; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb; }
+        .footer p { font-size: 12px; color: #9ca3af; line-height: 1.8; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>✅ Payment Successful</h1>
+        <p>Your order has been confirmed and is being processed</p>
+    </div>
+
+    <div class="body">
+
+        <p class="greeting">
+            Hi <strong th:text="${name}">Customer</strong>,<br/>
+            Great news! Your payment was received and your order is now confirmed.
+        </p>
+
+        <!-- Amount -->
+        <div class="amount-box">
+            <div class="lbl">Amount Paid</div>
+            <div class="amount">
+                <span th:text="${currency == 'INR' ? '₹' : '$'}">₹</span><span th:text="${#numbers.formatDecimal(amount, 1, 2)}">0.00</span>
+            </div>
+            <div style="margin-top:8px;"><span class="badge">CONFIRMED</span></div>
+        </div>
+
+        <!-- Payment Info -->
+        <div class="section">
+            <h3>Payment Details</h3>
+            <div class="row">
+                <span class="lbl">Order Number</span>
+                <span class="val" th:text="${orderNumber}">ORD-00000001</span>
+            </div>
+            <div class="row">
+                <span class="lbl">Transaction ID</span>
+                <span class="val" th:text="${transactionId}">pi_xxx</span>
+            </div>
+            <div class="row">
+                <span class="lbl">Payment Method</span>
+                <span class="val" th:text="${paymentMethod}">CREDIT_CARD</span>
+            </div>
+            <div class="row">
+                <span class="lbl">Paid On</span>
+                <span class="val" th:text="${#temporals.format(paidAt, 'dd MMM yyyy, HH:mm')}">01 Mar 2026</span>
+            </div>
+        </div>
+
+        <!-- Items -->
+        <div class="section">
+            <h3>Items Ordered</h3>
+            <table class="items">
+                <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th class="price">Total</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="item : ${items}">
+                    <td th:text="${item.productName}">Product</td>
+                    <td th:text="${item.quantity}">1</td>
+                    <td class="price" th:text="'₹' + ${#numbers.formatDecimal(item.totalPrice, 1, 2)}">₹0.00</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Shipping Address -->
+        <div class="section" th:if="${shippingAddress != null}">
+            <h3>Shipping To</h3>
+            <p style="font-size:14px; color:#374151; line-height:1.8;">
+                <span th:text="${shippingAddress.street}">Street</span><br/>
+                <span th:text="${shippingAddress.city + ', ' + shippingAddress.state}">City, State</span><br/>
+                <span th:text="${shippingAddress.country + ' - ' + shippingAddress.zipCode}">Country - ZIP</span>
+            </p>
+        </div>
+
+        <p style="font-size:13px; color:#6b7280; text-align:center; margin-top:20px;">
+            We'll notify you when your order is shipped. 📦
+        </p>
+    </div>
+
+    <div class="footer">
+        <p>© 2026 OrderFlow. All rights reserved.<br/>
+            Questions? Reply to this email or contact support.</p>
+    </div>
+</div>
 </body>
 </html>

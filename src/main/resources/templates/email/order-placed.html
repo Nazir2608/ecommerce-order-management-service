@@ -1,31 +1,104 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="UTF-8"><title>Order Confirmed</title></head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: #4F46E5; padding: 20px; border-radius: 8px 8px 0 0;">
-    <h1 style="color: white; margin: 0;">Order Confirmed ✅</h1>
-  </div>
-  <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; border: 1px solid #e0e0e0;">
-    <p>Hi <strong th:text="${name}">Customer</strong>,</p>
-    <p>Your order <strong th:text="${orderNumber}">ORD-001</strong> has been placed successfully!</p>
-    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-      <thead>
-        <tr style="background: #4F46E5; color: white;">
-          <th style="padding: 10px; text-align: left;">Product</th>
-          <th style="padding: 10px;">Qty</th>
-          <th style="padding: 10px; text-align: right;">Price</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr th:each="item : ${items}">
-          <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;" th:text="${item.productName}">Product</td>
-          <td style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;" th:text="${item.quantity}">1</td>
-          <td style="padding: 10px; text-align: right; border-bottom: 1px solid #e0e0e0;" th:text="'$' + ${item.totalPrice}">$0.00</td>
-        </tr>
-      </tbody>
-    </table>
-    <p style="text-align: right;"><strong>Total: $<span th:text="${totalAmount}">0.00</span></strong></p>
-    <p style="color: #666; font-size: 12px;">We'll notify you when your order ships.</p>
-  </div>
+<head>
+    <meta charset="UTF-8"/>
+    <title>Order Placed</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; background: #f4f4f4; }
+        .container { max-width: 600px; margin: 30px auto; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #3b82f6, #1d4ed8); padding: 36px 30px; text-align: center; }
+        .header h1 { color: #fff; font-size: 26px; }
+        .header p { color: #dbeafe; font-size: 14px; margin-top: 6px; }
+        .body { padding: 32px 30px; }
+        .greeting { font-size: 15px; color: #374151; margin-bottom: 24px; line-height: 1.6; }
+        .order-badge { background: #eff6ff; border: 2px solid #3b82f6; border-radius: 10px; padding: 20px; text-align: center; margin: 20px 0; }
+        .order-badge .num { font-size: 24px; font-weight: bold; color: #1d4ed8; }
+        .section { background: #f9fafb; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .section h3 { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; }
+        table.items { width: 100%; border-collapse: collapse; font-size: 14px; }
+        table.items th { text-align: left; padding: 8px 4px; color: #6b7280; font-size: 12px; border-bottom: 1px solid #e5e7eb; }
+        table.items td { padding: 9px 4px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+        table.items .price { text-align: right; font-weight: 500; }
+        .summary-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 14px; border-bottom: 1px solid #f3f4f6; }
+        .summary-row:last-child { border-bottom: none; font-weight: bold; font-size: 15px; color: #111827; }
+        .footer { background: #f9fafb; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb; }
+        .footer p { font-size: 12px; color: #9ca3af; line-height: 1.8; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📦 Order Received!</h1>
+        <p>We've received your order and it's being prepared</p>
+    </div>
+    <div class="body">
+        <p class="greeting">
+            Hi <strong th:text="${name}">Customer</strong>,<br/>
+            Thank you for your order! Here's a summary of what you ordered.
+        </p>
+
+        <div class="order-badge">
+            <div style="font-size:12px;color:#6b7280;letter-spacing:1px;text-transform:uppercase;">Order Number</div>
+            <div class="num" th:text="${orderNumber}">ORD-00000001</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:6px;" th:text="${#temporals.format(placedAt, 'dd MMM yyyy, HH:mm')}">01 Mar 2026</div>
+        </div>
+
+        <div class="section">
+            <h3>Items Ordered</h3>
+            <table class="items">
+                <thead>
+                <tr><th>Product</th><th>Qty</th><th class="price">Price</th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="item : ${items}">
+                    <td th:text="${item.productName}">Product</td>
+                    <td th:text="${item.quantity}">1</td>
+                    <td class="price" th:text="'₹' + ${#numbers.formatDecimal(item.totalPrice, 1, 2)}">₹0.00</td>
+                </tr>
+                </tbody>
+            </table>
+            <div style="margin-top:12px; padding-top:8px; border-top:1px solid #e5e7eb;">
+                <div class="summary-row">
+                    <span style="color:#6b7280;">Subtotal</span>
+                    <span th:text="'₹' + ${#numbers.formatDecimal(totalAmount, 1, 2)}">₹0.00</span>
+                </div>
+                <div class="summary-row">
+                    <span style="color:#6b7280;">Discount</span>
+                    <span style="color:#22c55e;" th:text="'- ₹' + ${#numbers.formatDecimal(discountAmount, 1, 2)}">-₹0.00</span>
+                </div>
+                <div class="summary-row">
+                    <span style="color:#6b7280;">Shipping</span>
+                    <span th:text="${shippingAmount == 0 ? 'FREE' : '₹' + #numbers.formatDecimal(shippingAmount, 1, 2)}">FREE</span>
+                </div>
+                <div class="summary-row">
+                    <span>Total</span>
+                    <span th:text="'₹' + ${#numbers.formatDecimal(finalAmount, 1, 2)}">₹0.00</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section" th:if="${shippingAddress != null}">
+            <h3>Shipping Address</h3>
+            <p style="font-size:14px; color:#374151; line-height:1.8;">
+                <span th:text="${shippingAddress.street}">Street</span><br/>
+                <span th:text="${shippingAddress.city + ', ' + shippingAddress.state}">City</span><br/>
+                <span th:text="${shippingAddress.country + ' - ' + shippingAddress.zipCode}">Country</span>
+            </p>
+        </div>
+
+        <div class="section" th:if="${notes != null and !#strings.isEmpty(notes)}">
+            <h3>Order Notes</h3>
+            <p style="font-size:14px;color:#374151;" th:text="${notes}">Notes</p>
+        </div>
+
+        <p style="font-size:13px; color:#6b7280; text-align:center; margin-top:20px;">
+            Complete your payment to confirm the order. 💳
+        </p>
+    </div>
+    <div class="footer">
+        <p>© 2026 OrderFlow. All rights reserved.</p>
+    </div>
+</div>
 </body>
 </html>

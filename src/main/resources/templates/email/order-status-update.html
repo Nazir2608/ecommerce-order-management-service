@@ -1,15 +1,94 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="UTF-8"><title>Orderservice Notification</title></head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: #4F46E5; padding: 20px; border-radius: 8px 8px 0 0;">
-    <h1 style="color: white; margin: 0;">Order Update</h1>
-  </div>
-  <div style="padding: 30px; border: 1px solid #e0e0e0;">
-    <p>Hi <strong th:text="">Customer</strong>,</p>
-    <p>Your order <strong th:text="">ORD-001</strong> has been updated.</p>
-    <p th:if="">New status: <strong th:text="">STATUS</strong></p>
-    <p th:if="">Amount: <strong>$<span th:text="">0.00</span></strong></p>
-  </div>
+<head>
+    <meta charset="UTF-8"/><title>Order Status Update</title>
+    <style>
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body { font-family:Arial,sans-serif; background:#f4f4f4; }
+        .container { max-width:600px; margin:30px auto; background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,0.1); }
+        .header { background:linear-gradient(135deg,#8b5cf6,#6d28d9); padding:36px 30px; text-align:center; }
+        .header h1 { color:#fff; font-size:26px; }
+        .body { padding:32px 30px; }
+        .status-map { display:flex; justify-content:space-between; align-items:center; margin:24px 0; padding:20px; background:#f5f3ff; border-radius:10px; }
+        .step { text-align:center; flex:1; }
+        .step .dot { width:28px; height:28px; border-radius:50%; background:#e5e7eb; margin:0 auto 6px; display:flex; align-items:center; justify-content:center; font-size:12px; color:#9ca3af; }
+        .step .dot.done { background:#8b5cf6; color:#fff; }
+        .step .dot.active { background:#7c3aed; color:#fff; box-shadow:0 0 0 4px #ddd6fe; }
+        .step .label { font-size:10px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px; }
+        .step .label.active { color:#7c3aed; font-weight:bold; }
+        .connector { flex:0.5; height:2px; background:#e5e7eb; margin-bottom:20px; }
+        .connector.done { background:#8b5cf6; }
+        .section { background:#f9fafb; border-radius:8px; padding:20px; margin:20px 0; }
+        .section h3 { font-size:12px; color:#6b7280; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; border-bottom:1px solid #e5e7eb; padding-bottom:8px; }
+        .row { display:flex; justify-content:space-between; padding:7px 0; font-size:14px; border-bottom:1px solid #f3f4f6; }
+        .row:last-child { border-bottom:none; }
+        .row .lbl { color:#6b7280; } .row .val { color:#111827; font-weight:500; }
+        .footer { background:#f9fafb; padding:20px; text-align:center; border-top:1px solid #e5e7eb; }
+        .footer p { font-size:12px; color:#9ca3af; line-height:1.8; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🔔 Order Update</h1>
+    </div>
+    <div class="body">
+        <p style="font-size:15px;color:#374151;line-height:1.6;margin-bottom:20px;">
+            Hi <strong th:text="${name}">Customer</strong>,<br/>
+            Your order status has been updated.
+        </p>
+
+        <!-- Status Progress -->
+        <div class="status-map">
+            <div class="step">
+                <div class="dot done">✓</div>
+                <div class="label">Pending</div>
+            </div>
+            <div th:class="${status == 'CONFIRMED' or status == 'PROCESSING' or status == 'SHIPPED' or status == 'DELIVERED'} ? 'connector done' : 'connector'"></div>
+            <div class="step">
+                <div th:class="${status == 'CONFIRMED'} ? 'dot active' : (${status == 'PROCESSING' or status == 'SHIPPED' or status == 'DELIVERED'} ? 'dot done' : 'dot')">
+                    <span th:text="${status == 'CONFIRMED'} ? '✓' : (${status == 'PROCESSING' or status == 'SHIPPED' or status == 'DELIVERED'} ? '✓' : '2')">2</span>
+                </div>
+                <div th:class="${status == 'CONFIRMED'} ? 'label active' : 'label'">Confirmed</div>
+            </div>
+            <div th:class="${status == 'PROCESSING' or status == 'SHIPPED' or status == 'DELIVERED'} ? 'connector done' : 'connector'"></div>
+            <div class="step">
+                <div th:class="${status == 'PROCESSING'} ? 'dot active' : (${status == 'SHIPPED' or status == 'DELIVERED'} ? 'dot done' : 'dot')">
+                    <span th:text="${status == 'SHIPPED' or status == 'DELIVERED'} ? '✓' : '3'">3</span>
+                </div>
+                <div th:class="${status == 'PROCESSING'} ? 'label active' : 'label'">Processing</div>
+            </div>
+            <div th:class="${status == 'SHIPPED' or status == 'DELIVERED'} ? 'connector done' : 'connector'"></div>
+            <div class="step">
+                <div th:class="${status == 'SHIPPED'} ? 'dot active' : (${status == 'DELIVERED'} ? 'dot done' : 'dot')">
+                    <span th:text="${status == 'DELIVERED'} ? '✓' : '4'">4</span>
+                </div>
+                <div th:class="${status == 'SHIPPED'} ? 'label active' : 'label'">Shipped</div>
+            </div>
+            <div th:class="${status == 'DELIVERED'} ? 'connector done' : 'connector'"></div>
+            <div class="step">
+                <div th:class="${status == 'DELIVERED'} ? 'dot active' : 'dot'">5</div>
+                <div th:class="${status == 'DELIVERED'} ? 'label active' : 'label'">Delivered</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Order Details</h3>
+            <div class="row">
+                <span class="lbl">Order Number</span>
+                <span class="val" th:text="${orderNumber}">ORD-00000001</span>
+            </div>
+            <div class="row">
+                <span class="lbl">Current Status</span>
+                <span class="val" th:text="${status}">CONFIRMED</span>
+            </div>
+            <div class="row">
+                <span class="lbl">Updated At</span>
+                <span class="val" th:text="${#temporals.format(updatedAt, 'dd MMM yyyy, HH:mm')}">01 Mar 2026</span>
+            </div>
+        </div>
+    </div>
+    <div class="footer"><p>© 2026 OrderFlow. All rights reserved.</p></div>
+</div>
 </body>
 </html>
