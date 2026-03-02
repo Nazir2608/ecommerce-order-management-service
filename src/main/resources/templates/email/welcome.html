@@ -1,22 +1,70 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="UTF-8"><title>Welcome to Orderservice</title></head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: #4F46E5; padding: 20px; border-radius: 8px 8px 0 0;">
-    <h1 style="color: white; margin: 0;">Welcome to Orderservice! 🎉</h1>
-  </div>
-  <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; border: 1px solid #e0e0e0;">
-    <p>Hi <strong th:text="${name}">Customer</strong>,</p>
-    <p>Thank you for joining Orderservice! Your account has been created successfully.</p>
-    <p>You can now:</p>
-    <ul>
-      <li>Browse our product catalog</li>
-      <li>Add items to your cart</li>
-      <li>Place and track orders</li>
-    </ul>
-    <p style="color: #666; font-size: 12px; margin-top: 30px;">
-      If you didn't create this account, please contact us at support@orderservice.com
-    </p>
-  </div>
+<head>
+    <meta charset="UTF-8"/><title>Welcome!</title>
+    <style>
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body { font-family:Arial,sans-serif; background:#f4f4f4; }
+        .container { max-width:600px; margin:30px auto; background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,0.1); }
+        .header { background:linear-gradient(135deg,#6366f1,#4338ca); padding:36px 30px; text-align:center; }
+        .header h1 { color:#fff; font-size:26px; }
+        .header p { color:#e0e7ff; font-size:14px; margin-top:6px; }
+        .body { padding:32px 30px; text-align:center; }
+        .features { display:flex; justify-content:space-around; margin:28px 0; }
+        .feature { text-align:center; flex:1; padding:0 12px; }
+        .feature .icon { font-size:28px; margin-bottom:8px; }
+        .feature .title { font-size:13px; font-weight:bold; color:#374151; }
+        .feature .desc { font-size:12px; color:#6b7280; margin-top:4px; }
+        .section { background:#f9fafb; border-radius:8px; padding:20px; margin:20px 0; text-align:left; }
+        .section h3 { font-size:12px; color:#6b7280; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; border-bottom:1px solid #e5e7eb; padding-bottom:8px; }
+        .row { display:flex; justify-content:space-between; padding:7px 0; font-size:14px; border-bottom:1px solid #f3f4f6; }
+        .row:last-child { border-bottom:none; }
+        .row .lbl { color:#6b7280; } .row .val { color:#111827; font-weight:500; }
+        .footer { background:#f9fafb; padding:20px; text-align:center; border-top:1px solid #e5e7eb; }
+        .footer p { font-size:12px; color:#9ca3af; line-height:1.8; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🎉 Welcome to OrderFlow!</h1>
+        <p>Your account is ready — start shopping today</p>
+    </div>
+    <div class="body">
+        <p style="font-size:16px;color:#374151;line-height:1.7;">
+            Hi <strong th:text="${name}">Customer</strong>!<br/>
+            Your account has been created successfully.
+        </p>
+        <div class="features">
+            <div class="feature">
+                <div class="icon">🛍️</div>
+                <div class="title">Shop</div>
+                <div class="desc">Browse thousands of products</div>
+            </div>
+            <div class="feature">
+                <div class="icon">📦</div>
+                <div class="title">Track</div>
+                <div class="desc">Real-time order tracking</div>
+            </div>
+            <div class="feature">
+                <div class="icon">💳</div>
+                <div class="title">Pay</div>
+                <div class="desc">Secure payments</div>
+            </div>
+        </div>
+        <div class="section">
+            <h3>Account Details</h3>
+            <div class="row">
+                <span class="lbl">Email</span>
+                <span class="val" th:text="${email}">user@example.com</span>
+            </div>
+            <div class="row">
+                <span class="lbl">Member Since</span>
+                <span class="val" th:text="${#temporals.format(joinedAt, 'dd MMM yyyy')}">01 Mar 2026</span>
+            </div>
+        </div>
+    </div>
+    <div class="footer"><p>© 2026 OrderFlow. All rights reserved.</p></div>
+</div>
 </body>
 </html>
