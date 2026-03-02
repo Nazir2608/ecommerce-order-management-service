@@ -5,7 +5,6 @@ spring:
   profiles:
     active: dev
 
-  # ── JPA shared behaviour only — dialect/ddl-auto set per profile ──────────
   jpa:
     open-in-view: false
     show-sql: false
@@ -13,27 +12,30 @@ spring:
       hibernate:
         format_sql: true
 
-  # ── Thymeleaf ──────────────────────────────────────────────────────────────
   thymeleaf:
     prefix: classpath:/templates/
     suffix: .html
     cache: false
 
-  # ── Mail shared defaults ───────────────────────────────────────────────────
   mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
-          auth: false
+          auth: true
           starttls:
-            enable: false
+            enable: true
+            required: true
+        connectiontimeout: 5000
+        timeout: 5000
+        writetimeout: 5000
 
 server:
   port: 8080
 
-# ── App custom properties ───────────────────────────────────────────────────
 app:
   jwt:
     secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
@@ -58,7 +60,10 @@ app:
   rate-limit:
     requests-per-minute: 100
 
-# ── Swagger ──────────────────────────────────────────────────────────────────
+  mail:
+    from: ${MAIL_USERNAME:noreply@orderflow.com}
+    from-name: OrderFlow
+
 springdoc:
   api-docs:
     path: /api-docs
@@ -66,7 +71,6 @@ springdoc:
     path: /swagger-ui.html
     operationsSorter: method
 
-# ── Actuator ─────────────────────────────────────────────────────────────────
 management:
   endpoints:
     web:
@@ -76,7 +80,6 @@ management:
     health:
       show-details: when_authorized
 
-# ── Logging base ─────────────────────────────────────────────────────────────
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
